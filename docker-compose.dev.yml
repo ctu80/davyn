@@ -1,0 +1,25 @@
+# Development override: build locally, bind-mount the PHP source for live edits,
+# keep data/config on the host for easy inspection, and run in dev mode (non-Secure
+# cookies so login works over plain http://localhost).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# The React UI is baked into the image; for live UI development run the Vite dev
+# server separately (cd app/frontend && npm run dev). Rebuild the image to pick up
+# UI changes in the container.
+services:
+  davyn:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      APP_ENV: dev
+    volumes:
+      # Live PHP source (read-only — the app never writes to its own code).
+      - ./app/public:/var/www/html/public:ro
+      - ./app/src:/var/www/html/src:ro
+      - ./app/migrations:/var/www/html/migrations:ro
+      - ./app/bin:/var/www/html/bin:ro
+      # Host-visible data/config (override the named volumes from the base file).
+      - ./data:/var/lib/davyn
+      - ./config:/config

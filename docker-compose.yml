@@ -1,0 +1,40 @@
+# Davyn — production stack. Pulls the all-in-one image (PHP + SabreDAV + built UI +
+# Caddy); no Node, PHP or Composer required on the host.
+#
+#   cp .env.example .env     # set APP_SECRET
+#   docker compose pull
+#   docker compose up -d
+#
+# To build the image locally from source instead of pulling, add the build
+# override:  docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+name: davyn
+
+services:
+  davyn:
+    image: ghcr.io/ctu80/davyn:0.5.0-alpha
+    container_name: davyn
+    # Configuration comes from .env (copy .env.example → .env). Optional so the
+    # image still boots on its built-in defaults if no .env is present.
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      # host:container. The container listens on 8080 (HTTP) and 8443 (HTTPS).
+      # Change the host side via HOST_HTTP_PORT / HOST_HTTPS_PORT in .env.
+      - "${HOST_HTTP_PORT:-8080}:8080"
+      - "${HOST_HTTPS_PORT:-8443}:8443"
+    volumes:
+      # Persisted state. Named volumes survive recreation and updates.
+      - davyn_data:/var/lib/davyn     # SQLite DB, backups, imports, exports
+      - davyn_config:/config          # TLS certificate store
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  davyn_data:
+  davyn_config:

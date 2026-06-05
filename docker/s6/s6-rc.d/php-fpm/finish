@@ -1,0 +1,13 @@
+#!/bin/sh
+# Runs whenever the php-fpm service goes down (crash, kill, or restart). When the
+# master dies abruptly its worker children are reparented to PID 1 and keep holding
+# the :9000 listen socket — the new master would then loop forever on exitcode 78
+# ("address already in use"). Reap any leftover php-fpm processes so s6 can start a
+# clean master that binds immediately. (No-op on a graceful stop where none remain.)
+for d in /proc/[0-9]*; do
+	comm=$(cat "$d/comm" 2>/dev/null) || continue
+	case "$comm" in
+		php-fpm*) kill -9 "$(basename "$d")" 2>/dev/null || true ;;
+	esac
+done
+exit 0

@@ -1,0 +1,13 @@
+# Build the all-in-one image locally from source instead of pulling it from GHCR.
+# Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
+#
+# Requires only Docker — the Node UI build and Composer install happen inside the
+# image's build stages, not on the host.
+services:
+  davyn:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile

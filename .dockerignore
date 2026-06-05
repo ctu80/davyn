@@ -1,0 +1,35 @@
+# Keep the build context small. The PHP image only needs composer.json/lock and
+# the app source it copies; everything below is irrelevant to the build and would
+# only slow the daemon upload (or leak host state into the image).
+
+.git
+.github
+.gitignore
+
+# Local runtime data, user content and secrets — never bake into an image.
+.env
+data/
+config/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Frontend: node deps and build output (the SPA is built separately and served by
+# Caddy from a bind-mount, not from the PHP image).
+app/frontend/node_modules/
+node_modules/
+app/frontend/dist/
+app/frontend/.vite/
+
+# Dependencies are installed inside the image, not copied from the host.
+vendor/
+app/vendor/
+
+# Docs, tests artifacts and editor/OS cruft.
+docs/
+.phpunit.cache/
+.phpunit.result.cache
+coverage/
+.DS_Store
+Thumbs.db

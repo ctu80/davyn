@@ -1,0 +1,4 @@
+#!/command/with-contenv sh
+# Supervised by s6: run Caddy in the foreground. The conditional-HTTPS stubs under
+# /etc/caddy/conf.d/ are generated once by the init-davyn oneshot before this starts.
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile

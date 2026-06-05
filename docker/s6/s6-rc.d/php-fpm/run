@@ -1,0 +1,4 @@
+#!/command/with-contenv sh
+# Supervised by s6: run PHP-FPM in the foreground so a crash is detected and the
+# service is restarted automatically.
+exec php-fpm -F

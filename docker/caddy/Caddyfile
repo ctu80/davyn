@@ -1,0 +1,145 @@
+# Davyn Caddy config.
+#
+# The whole site definition lives in the (davyn_app) snippet so it can be served
+# on both the HTTP port (always) and the HTTPS port (only when a valid cert is
+# present). The HTTPS server block is generated at container start by
+# entrypoint.sh into /etc/caddy/conf.d/https.caddy — see that script. HTTP never
+# depends on the cert, so a missing/broken cert can never take the site down.
+
+{
+	# Internal, port-based deployment behind a reverse proxy: no public ACME and
+	# no HTTP->HTTPS auto-redirects. TLS is served only via the explicit cert
+	# files configured in the generated HTTPS block.
+	auto_https disable_redirects
+}
+
+(davyn_app) {
+	# Security headers (applied to all responses)
+	header {
+		# default-src locks everything to same-origin; inline script/style are
+		# still permitted because the UI uses inline handlers/styles. object/frame
+		# are denied outright to mitigate clickjacking and plugin-based attacks.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		# Ignored over plain HTTP; takes effect once served behind TLS.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		# Don't advertise the server software.
+		-Server
+	}
+
+	# Well-known redirects to /dav/
+	redir /.well-known/caldav  /dav/ 301
+	redir /.well-known/carddav /dav/ 301
+
+	# DAV — all methods (PROPFIND, etc.) routed to dav.php
+	handle /dav* {
+		root * /var/www/html/public
+		rewrite * /dav.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# User self-service API
+	handle /api/user/* {
+		root * /var/www/html/public
+		rewrite * {path}.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# Admin API — JSON endpoints (must be before /admin* static handler)
+	handle /api/admin/* {
+		root * /var/www/html/public
+		rewrite * {path}.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# First-run setup API — unauthenticated; each endpoint enforces "no admin yet"
+	# server-side. Inert once an admin exists.
+	handle /api/setup/* {
+		root * /var/www/html/public
+		rewrite * {path}.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# Admin UI is now part of the React SPA under /app/admin — redirect legacy path.
+	# 308 (not 301) keeps the method and avoids browsers hard-caching a permanent
+	# redirect in case this path is ever repurposed.
+	handle /admin* {
+		redir * /app{uri} 308
+	}
+
+	# Static assets (i18n, etc.)
+	handle /assets/* {
+		root * /var/www/html/public
+		file_server
+	}
+
+	# Public calendar export (no auth)
+	handle /public/calendar/* {
+		root * /var/www/html/public
+		rewrite * /public-calendar.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# Health endpoint
+	handle /health {
+		root * /var/www/html/public
+		rewrite * /health.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# First-run setup wizard (creates the first admin). Redirects to /login once
+	# an admin exists; setup.php enforces that server-side.
+	handle /setup {
+		root * /var/www/html/public
+		rewrite * /setup.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# Auth routes
+	handle /login {
+		root * /var/www/html/public
+		rewrite * /login.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	handle /logout {
+		root * /var/www/html/public
+		rewrite * /logout.php
+		php_fastcgi 127.0.0.1:9000
+	}
+
+	# React SPA (built by Vite to app/frontend/dist) — static, with SPA fallback.
+	redir /app /app/ 308
+	handle /app/* {
+		uri strip_prefix /app
+		root * /var/www/html/frontend
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Root → SPA. The old "/" landing page (links to Admin/App) is gone now that
+	# admin + app are one consolidated UI. A logged-in user lands in the app; a
+	# logged-out one is bounced to /login by the SPA's first 401.
+	redir / /app/ 302
+
+	# PHP App — catch-all
+	handle {
+		root * /var/www/html/public
+		php_fastcgi 127.0.0.1:9000
+		file_server
+	}
+}
+
+# HTTP listener (:8080). entrypoint.sh generates this: normally "import davyn_app",
+# but a redirect-to-HTTPS block when the admin has forced HTTPS *and* a valid cert is
+# present. The cert guard is a fail-safe — without a cert, plain HTTP always returns,
+# so a missing/broken cert can never lock the site out. Fixed path so the import
+# target always exists.
+import /etc/caddy/conf.d/http.caddy
+
+# Optional HTTPS listener. entrypoint.sh writes a comment-only stub here when no
+# valid cert exists, or a ":8443 { import davyn_app; tls <cert> <key> }" block
+# when one does. Fixed path (not a glob) so the import target always exists.
+import /etc/caddy/conf.d/https.caddy

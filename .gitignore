@@ -1,0 +1,40 @@
+# ── Secrets & runtime data ──
+.env
+*.local
+data/
+*.sqlite
+*.sqlite-journal
+# Internal-HTTPS certificate store (created at runtime by docker/scripts/davyn-init.sh).
+config/certs/
+
+# ── Editor / tooling config (not part of the product) ──
+.claude/
+
+# ── PHP dependencies (installed in the image / via composer) ──
+# app/composer.lock IS committed (reproducible builds; the Dockerfile copies it).
+vendor/
+app/vendor/
+*.sqlite-wal
+*.sqlite-shm
+
+# ── Test & coverage artifacts (the tests/ sources themselves ARE committed) ──
+.phpunit.cache/
+.phpunit.result.cache
+app/coverage/
+coverage/
+test-output/
+
+# ── Frontend: dependencies & build output ──
+# Source (app/frontend/src, config, package*.json) IS committed.
+# node_modules and the Vite build are regenerated with `npm ci && npm run build`.
+node_modules/
+app/frontend/dist/
+app/frontend/.vite/
+*.tsbuildinfo
+
+# ── Internal / historical docs (kept locally, not published) ──
+docs/internal/
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db

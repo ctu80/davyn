@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  php-tests:
+    name: PHP unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3
+          tools: composer:v2
+      - name: Install dependencies
+        working-directory: app
+        run: composer install --no-interaction --no-progress
+      - name: PHPUnit
+        working-directory: app
+        run: vendor/bin/phpunit
+
+  frontend:
+    name: Frontend build & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: app/frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: app/frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: app/frontend
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: app/frontend
+        run: npm run build
+
+  smoke:
+    name: DAV smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & start the all-in-one stack
+        # The image build stage compiles the React UI, so no host Node step is
+        # needed here. Run in dev mode so cookies are non-Secure over plain HTTP.
+        run: |
+          echo "APP_ENV=dev" > .env
+          docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/health | grep -q '"status":"ok"'; then
+              echo "healthy"; exit 0
+            fi
+            sleep 2
+          done
+          echo "service did not become healthy"; docker compose logs; exit 1
+      - name: Apply migrations
+        run: docker compose exec -T davyn php bin/migrate.php
+      - name: Seed admin user + default collections
+        run: |
+          docker compose exec -T davyn php bin/create-user.php \
+            --username admin --display-name Admin --role admin --password 'ChangeMe123!'
+          docker compose exec -T davyn php bin/create-default-collections.php --username admin
+      - name: Run smoke tests
+        run: bash tests/smoke.sh
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs

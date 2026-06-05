@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <!-- Served from app/public/assets via Caddy's static /assets route. The dark
+         mark is the default; browsers that honour prefers-color-scheme on
+         favicons swap to the light mark in light mode. -->
+    <link rel="icon" type="image/png" href="/assets/davyn-dark.png" />
+    <link rel="icon" type="image/png" href="/assets/davyn-dark.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" href="/assets/davyn-light.png" media="(prefers-color-scheme: light)" />
+    <link rel="apple-touch-icon" href="/assets/davyn-dark.png" />
+    <title>Davyn</title>
+    <script>
+      // Apply persisted theme + accent before first paint. Mirrors theme.tsx.
+      (function () {
+        try {
+          var t = localStorage.getItem('davyn-theme') || 'dark'
+          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+          var acc = localStorage.getItem('davyn-accent')
+          if (acc) {
+            var m = /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/.exec(acc)
+            if (m) document.documentElement.style.setProperty('--accent',
+              parseInt(m[1],16)+' '+parseInt(m[2],16)+' '+parseInt(m[3],16))
+          }
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

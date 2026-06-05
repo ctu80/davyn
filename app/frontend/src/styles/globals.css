@@ -1,0 +1,298 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode (.dark on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ───────────────────────── Design tokens ─────────────────────────
+   Semantic vars switch per theme; mapped into Tailwind color utilities
+   via @theme inline so `bg-surface`, `text-muted`, etc. are runtime-aware. */
+@layer base {
+  :root {
+    /* Dark is the signature look; defined on :root so it's the default. */
+    --bg: 7 10 20;                  /* deep blue-black */
+    --bg-deep: 4 6 14;              /* gradient floor for depth */
+    --bg-elevated: 16 21 36;
+    --surface: 255 255 255;         /* used with low alpha for glass */
+    --surface-solid: 17 22 38;
+    --foreground: 232 236 246;
+    --muted: 150 164 188;
+    --muted-strong: 197 206 224;
+    --border: 255 255 255;          /* low-alpha hairline */
+    --border-strong: 148 163 184;
+
+    --accent: 124 108 246;          /* indigo-violet */
+    --accent-2: 45 212 233;         /* cyan */
+    --accent-3: 168 130 250;        /* violet */
+    --accent-foreground: 255 255 255;
+
+    --success: 52 211 153;
+    --warning: 251 191 36;
+    --danger: 248 113 113;
+    --info: 96 165 250;
+
+    /* gradient orbs */
+    --orb-1: 99 102 241;
+    --orb-2: 34 211 238;
+    --orb-3: 168 85 247;
+
+    --radius: 1rem;
+
+    /* Layered shadows with a subtle top inner highlight for depth. */
+    --hi: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+    --shadow-soft:
+      var(--hi),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 8px 24px -8px rgb(0 0 0 / 0.5),
+      0 28px 56px -28px rgb(0 0 0 / 0.65);
+    --shadow-glow:
+      var(--hi),
+      0 0 0 1px rgb(var(--accent) / 0.28),
+      0 8px 28px -10px rgb(var(--accent) / 0.45),
+      0 22px 60px -24px rgb(var(--accent) / 0.4);
+    --glass-hi: inset 0 1px 0 0 rgb(255 255 255 / 0.08);
+  }
+
+  :root:not(.dark) {
+    --bg: 245 247 251;              /* warm off-white */
+    --bg-deep: 235 239 247;
+    --bg-elevated: 255 255 255;
+    --surface: 255 255 255;
+    --surface-solid: 255 255 255;
+    --foreground: 21 30 48;
+    --muted: 100 116 139;
+    --muted-strong: 51 65 85;
+    --border: 15 23 42;
+    --border-strong: 100 116 139;
+
+    --accent: 91 92 240;
+    --accent-2: 14 165 233;
+    --accent-3: 139 92 246;
+    --accent-foreground: 255 255 255;
+
+    --success: 16 185 129;
+    --warning: 217 119 6;
+    --danger: 220 38 38;
+    --info: 37 99 235;
+
+    --orb-1: 129 140 248;
+    --orb-2: 56 189 248;
+    --orb-3: 192 132 252;
+
+    --hi: inset 0 1px 0 0 rgb(255 255 255 / 0.9);
+    --shadow-soft:
+      var(--hi),
+      0 1px 2px rgb(16 24 40 / 0.05),
+      0 8px 20px -10px rgb(16 24 40 / 0.12),
+      0 24px 48px -28px rgb(16 24 40 / 0.18);
+    --shadow-glow:
+      var(--hi),
+      0 0 0 1px rgb(var(--accent) / 0.16),
+      0 10px 36px -12px rgb(var(--accent) / 0.3);
+    --glass-hi: inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+  }
+}
+
+@theme inline {
+  --color-bg: rgb(var(--bg));
+  --color-bg-elevated: rgb(var(--bg-elevated));
+  --color-surface-solid: rgb(var(--surface-solid));
+  --color-foreground: rgb(var(--foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-strong: rgb(var(--muted-strong));
+  --color-accent: rgb(var(--accent));
+  --color-accent-2: rgb(var(--accent-2));
+  --color-accent-3: rgb(var(--accent-3));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-success: rgb(var(--success));
+  --color-warning: rgb(var(--warning));
+  --color-danger: rgb(var(--danger));
+  --color-info: rgb(var(--info));
+
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 0.5rem);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 16s ease-in-out infinite;
+  --animate-float-slow: float-slow 22s ease-in-out infinite;
+  --animate-sheen: sheen 7s ease-in-out infinite;
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--border) / 0.1);
+  }
+  html { color-scheme: dark; }
+  html:not(.dark) { color-scheme: light; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: rgb(var(--foreground));
+    background:
+      linear-gradient(180deg, rgb(var(--bg)) 0%, rgb(var(--bg-deep)) 100%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Ambient gradient backdrop — soft radial washes / mesh */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(48rem 48rem at 8% -12%, rgb(var(--orb-1) / 0.22), transparent 58%),
+      radial-gradient(42rem 42rem at 102% 4%, rgb(var(--orb-2) / 0.16), transparent 55%),
+      radial-gradient(52rem 52rem at 78% 108%, rgb(var(--orb-3) / 0.16), transparent 60%),
+      radial-gradient(40rem 40rem at 18% 118%, rgb(var(--orb-1) / 0.1), transparent 60%);
+    pointer-events: none;
+  }
+  /* Tactile grain — keeps large gradients from looking flat/banded */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  :root:not(.dark) body::after { opacity: 0.02; }
+
+  ::selection { background: rgb(var(--accent) / 0.3); }
+
+  /* Refined scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--border-strong) / 0.4) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb { background: rgb(var(--border-strong) / 0.3); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-thumb:hover { background: rgb(var(--border-strong) / 0.5); background-clip: content-box; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+  }
+
+  /* ── Date / datetime-local inputs ───────────────────────────────────────────
+     `color-scheme` does NOT inherit, so we set it explicitly on these inputs.
+     This makes the browser's native popup calendar / time picker render in
+     dark or light mode to match our class-based theme toggle. Without it the
+     popup always follows the OS preference, which may differ from the chosen
+     app theme.
+     The indicator icon tracks `color-scheme` automatically in Chromium (dark →
+     white icon, light → dark icon); we just tune opacity/hover. */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    color-scheme: dark;
+  }
+  :root:not(.dark) input[type="date"],
+  :root:not(.dark) input[type="datetime-local"],
+  :root:not(.dark) input[type="time"] {
+    color-scheme: light;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-clock-picker-indicator {
+    opacity: 0.4;
+    cursor: pointer;
+    border-radius: 0.25rem;
+    padding: 2px;
+    transition: opacity 0.15s, background-color 0.15s;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-clock-picker-indicator:hover {
+    opacity: 0.85;
+    background-color: rgb(var(--accent) / 0.15);
+  }
+}
+
+/* ───────────────────────── Utilities ───────────────────────── */
+@layer utilities {
+  .glass {
+    background: linear-gradient(180deg, rgb(var(--surface) / 0.08), rgb(var(--surface) / 0.03));
+    border: 1px solid rgb(var(--border) / 0.1);
+    box-shadow: var(--glass-hi);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+  :root:not(.dark) .glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.62));
+    border-color: rgb(var(--border) / 0.08);
+  }
+  .glass-strong {
+    background: rgb(var(--surface-solid) / 0.88);
+    border: 1px solid rgb(var(--border) / 0.12);
+    box-shadow: var(--glass-hi);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+  }
+  :root:not(.dark) .glass-strong { background: rgb(255 255 255 / 0.92); }
+
+  .gradient-text {
+    background-image: linear-gradient(110deg, rgb(var(--accent-3)), rgb(var(--accent-2)) 55%, rgb(var(--accent)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .gradient-accent {
+    background-image: linear-gradient(135deg, rgb(var(--accent)) 0%, rgb(var(--accent-3)) 55%, rgb(var(--accent-2)) 130%);
+  }
+  /* Premium top sheen line for cards / hero (needs a relative parent). */
+  .sheen-top::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--surface) / 0.5), transparent);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  :root:not(.dark) .sheen-top::before { background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.9), transparent); }
+
+  .orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(48px);
+    will-change: transform;
+    pointer-events: none;
+  }
+
+  .ring-accent { box-shadow: 0 0 0 2px rgb(var(--accent) / 0.4); }
+  .hairline { border: 1px solid rgb(var(--border) / 0.1); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .bg-grid {
+    background-image:
+      linear-gradient(rgb(var(--border) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--border) / 0.05) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: radial-gradient(70% 70% at 50% 30%, #000, transparent);
+    -webkit-mask-image: radial-gradient(70% 70% at 50% 30%, #000, transparent);
+  }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(var(--success) / 0.5); }
+  70% { box-shadow: 0 0 0 10px rgb(var(--success) / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--success) / 0); }
+}
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3%, -4%) scale(1.06); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-4%, 3%) scale(1.08); }
+}
+@keyframes sheen {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
